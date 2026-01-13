@@ -11,8 +11,8 @@ with col1:
     st.image("joy.png", use_container_width=True)
 
 with col2:
-    st.markdown("## JOY – Assistente do time de Placement")
-    st.caption("J.O.Y. — Agilidade no acompanhamento, precisão na entrega")
+    st.markdown("## J.O.Y – Assistente do time de Placement")
+    st.caption("JOY — Agilidade no acompanhamento, precisão na entrega")
 
     st.markdown(
         "Olá! Eu sou a **J.O.Y.**, assistente do time de Placement.  \n"

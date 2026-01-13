@@ -17,10 +17,8 @@ st.set_page_config(
 st.markdown(
     """
 <style>
-/* Centraliza melhor e dá cara de produto */
 .block-container { padding-top: 2rem; padding-bottom: 2rem; max-width: 980px; }
 
-/* Card bonito */
 .joy-card{
   border: 1px solid rgba(0,0,0,.08);
   border-radius: 18px;
@@ -29,7 +27,13 @@ st.markdown(
   box-shadow: 0 10px 25px rgba(0,0,0,.06);
 }
 
-/* Chips / tags */
+.joy-card-ans{
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 16px;
+  padding: 14px 14px;
+  background: rgba(255,255,255,.92);
+}
+
 .joy-chip{
   display:inline-block;
   padding: 6px 10px;
@@ -40,10 +44,9 @@ st.markdown(
   font-size: 13px;
 }
 
-/* Texto menor bonito */
 .joy-muted{ color: rgba(0,0,0,.60); font-size: 14px; }
+.joy-muted-2{ color: rgba(0,0,0,.55); font-size: 13px; }
 
-/* Ajuste do campo do chat */
 .stChatInput{ margin-top: 1rem; }
 </style>
 """,
@@ -58,14 +61,13 @@ st.markdown('<div class="joy-card">', unsafe_allow_html=True)
 c1, c2 = st.columns([1, 3], vertical_alignment="center")
 
 with c1:
-    # Evita quebrar se a imagem não estiver no repo
     try:
         st.image("joy.png", use_container_width=True)
     except Exception:
         st.write("")
 
 with c2:
-    st.markdown("## 💬 JOY – Assistente Placement Jr")
+    st.markdown("## 💬 JOY – Assistente do time de Placement")
     st.markdown(
         '<div class="joy-muted">J.O.Y. — Agilidade no acompanhamento, precisão na entrega</div>',
         unsafe_allow_html=True,
@@ -90,8 +92,36 @@ with c2:
     )
 
 st.markdown("</div>", unsafe_allow_html=True)
+st.write("")
 
-st.write("")  # espaçamento leve
+# =========================
+# ATALHOS (BOTÕES RÁPIDOS)
+# =========================
+if "quick_produto" not in st.session_state:
+    st.session_state.quick_produto = None
+if "quick_hist" not in st.session_state:
+    st.session_state.quick_hist = False
+
+st.markdown('<div class="joy-muted-2">Atalhos rápidos (opcional):</div>', unsafe_allow_html=True)
+b1, b2, b3, b4, b5 = st.columns([1.3, 1.1, 1, 1, 1])
+
+with b1:
+    if st.button("📌 Última atualização", use_container_width=True):
+        st.session_state.quick_hist = False
+with b2:
+    if st.button("🗂️ Histórico", use_container_width=True):
+        st.session_state.quick_hist = True
+with b3:
+    if st.button("🩺 Saúde", use_container_width=True):
+        st.session_state.quick_produto = "SAÚDE"
+with b4:
+    if st.button("🦷 Odonto", use_container_width=True):
+        st.session_state.quick_produto = "ODONTO"
+with b5:
+    if st.button("🩺+🦷 Ambos", use_container_width=True):
+        st.session_state.quick_produto = "AMBOS"
+
+st.write("")
 
 # =========================
 # DADOS (SHEETS)
@@ -113,7 +143,6 @@ def load_data(url: str) -> pd.DataFrame:
     df = pd.read_csv(url)
     df.columns = [c.strip() for c in df.columns]
 
-    # Ajustes de tipos
     df[COL_DATE] = pd.to_datetime(df[COL_DATE], errors="coerce", dayfirst=True)
     df[COL_ID] = df[COL_ID].astype(str).str.strip()
 
@@ -137,7 +166,6 @@ def parse_user_message(msg: str):
     elif re.search(r"\bsa(ú|u)de\b", m, flags=re.I):
         produto = "SAÚDE"
 
-    # Data: dd/mm/aaaa
     date_exact = None
     mdate = re.search(r"(\d{1,2}/\d{1,2}/\d{4})", m)
     if mdate:
@@ -146,7 +174,6 @@ def parse_user_message(msg: str):
         except Exception:
             date_exact = None
 
-    # Desde: "desde 10/01/2026"
     date_since = None
     msince = re.search(r"desde\s+(\d{1,2}/\d{1,2}/\d{4})", m, flags=re.I)
     if msince:
@@ -155,13 +182,10 @@ def parse_user_message(msg: str):
         except Exception:
             date_since = None
 
-    # ID: primeiro número com 3+ dígitos
     mid = re.search(r"\b(\d{3,})\b", m)
     demanda_id = mid.group(1) if mid else None
 
-    # Se não tiver ID, trata como busca por empresa
     empresa_term = None if demanda_id else m
-
     return demanda_id, empresa_term, produto, historico, date_exact, date_since
 
 
@@ -175,7 +199,7 @@ def filter_df(df: pd.DataFrame, demanda_id=None, empresa_term=None, produto=None
         term = empresa_term.lower()
         out = out[out[COL_EMPRESA].str.lower().str.contains(term, na=False)]
 
-    if produto:
+    if produto and produto != "AMBOS":
         out = out[out[COL_PRODUTO].str.lower().str.contains(produto.lower(), na=False)]
 
     if date_exact is not None:
@@ -188,31 +212,36 @@ def filter_df(df: pd.DataFrame, demanda_id=None, empresa_term=None, produto=None
     return out
 
 
-def format_last_update(row: pd.Series) -> str:
+def render_last_update(row: pd.Series):
     d = row[COL_DATE]
     d_str = d.strftime("%d/%m/%Y") if pd.notna(d) else "—"
-    return (
-        f"**Última atualização**\n\n"
-        f"- **ID:** {row[COL_ID]}\n"
-        f"- **Empresa:** {row[COL_EMPRESA]}\n"
-        f"- **Demanda:** {row[COL_DEMANDA]}\n"
-        f"- **Produto:** {row[COL_PRODUTO]}\n"
-        f"- **Data:** {d_str}\n"
-        f"- **Status:** {row[COL_STATUS]}\n"
-        f"- **Autor:** {row[COL_AUTOR]}\n\n"
-        f"**Texto:** {row[COL_TEXTO]}"
-    )
+
+    st.markdown('<div class="joy-card-ans">', unsafe_allow_html=True)
+    st.markdown("**📌 Última atualização**")
+    st.markdown(f"- **ID:** {row[COL_ID]}")
+    st.markdown(f"- **Empresa:** {row[COL_EMPRESA]}")
+    st.markdown(f"- **Demanda:** {row[COL_DEMANDA]}")
+    st.markdown(f"- **Produto:** {row[COL_PRODUTO]}")
+    st.markdown(f"- **Data:** {d_str}")
+    st.markdown(f"- **Status:** {row[COL_STATUS]}")
+    st.markdown(f"- **Autor:** {row[COL_AUTOR]}")
+    st.markdown(f"**Texto:** {row[COL_TEXTO]}")
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
-def format_history(df_hist: pd.DataFrame) -> str:
-    lines = ["**Histórico de atualizações (mais recente primeiro):**\n"]
-    for _, r in df_hist.iterrows():
-        d = r[COL_DATE]
-        d_str = d.strftime("%d/%m/%Y") if pd.notna(d) else "—"
-        lines.append(
-            f"- **{d_str}** | **{r[COL_STATUS]}** | {r[COL_TEXTO]} _(por {r[COL_AUTOR]})_"
-        )
-    return "\n".join(lines)
+def render_history_table(df_hist: pd.DataFrame):
+    view = df_hist[[COL_DATE, COL_STATUS, COL_PRODUTO, COL_AUTOR, COL_TEXTO]].copy()
+    view[COL_DATE] = view[COL_DATE].dt.strftime("%d/%m/%Y")
+    view = view.rename(columns={
+        COL_DATE: "Data",
+        COL_STATUS: "Status",
+        COL_PRODUTO: "Produto",
+        COL_AUTOR: "Autor",
+        COL_TEXTO: "Atualização",
+    })
+
+    st.markdown("**🗂️ Histórico (mais recente primeiro):**")
+    st.dataframe(view, use_container_width=True, hide_index=True)
 
 
 # =========================
@@ -223,13 +252,20 @@ df = load_data(SHEETS_CSV_URL)
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Render histórico do chat
 for m in st.session_state.messages:
     with st.chat_message(m["role"]):
         st.markdown(m["content"])
 
+placeholder_hint = []
+if st.session_state.quick_produto:
+    placeholder_hint.append(st.session_state.quick_produto.lower())
+if st.session_state.quick_hist:
+    placeholder_hint.append("histórico")
+hint = (" | ".join(placeholder_hint)).strip()
+hint_txt = f" (atalhos: {hint})" if hint else ""
+
 user_msg = st.chat_input(
-    "Digite um ID (ex: 6163) ou a empresa. Ex: '6163 histórico' | 'Leadec saúde desde 10/01/2026'"
+    f"Digite um ID (ex: 6163) ou a empresa. Ex: '6163 histórico' | 'Leadec saúde desde 10/01/2026'{hint_txt}"
 )
 
 if user_msg:
@@ -238,17 +274,23 @@ if user_msg:
         st.markdown(user_msg)
 
     demanda_id, empresa_term, produto, historico, date_exact, date_since = parse_user_message(user_msg)
+
+    # Aplica atalhos se o usuário não informou explicitamente
+    if not produto and st.session_state.quick_produto:
+        produto = st.session_state.quick_produto
+    if not historico and st.session_state.quick_hist:
+        historico = True
+
     result = filter_df(df, demanda_id, empresa_term, produto, date_exact, date_since)
 
     with st.chat_message("assistant"):
         if result.empty:
             st.markdown(
-                "Nossa, não consegui encontrar nenhuma demanda do time com esses critérios. "
-                "Posso dar uma ajudinha? Tenta só o ID (ex: **6163**) ou só parte do nome da empresa/cliente."
-                "Ai eu revejo aqui para você, fechado?"
+                "Não achei nada com esses critérios 😅  \n"
+                "Tenta só o **ID** (ex: **6163**) ou só parte do nome da empresa."
             )
         else:
             if historico:
-                st.markdown(format_history(result))
+                render_history_table(result)
             else:
-                st.markdown(format_last_update(result.iloc[0]))
+                render_last_update(result.iloc[0])

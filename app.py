@@ -5,8 +5,16 @@ import streamlit as st
 # =========================
 # CONFIGURAÇÕES
 # =========================
-st.set_page_config(page_title="JOY - Assistente Placement", page_icon="💬", layout="centered")
-st.title("💬 JOY - Assistente Placement")
+st.set_page_config(page_title="JOY - Assistente do time de Placement", page_icon="💬", layout="centered")
+
+st.title("💬 JOY – Assistente do time de Placement")
+st.caption("J.O.Y. — Agilidade no acompanhamento, precisão na entrega")
+
+st.markdown(
+    "Olá! Eu sou a **J.O.Y.**, assistente do time de Placement.  \n"
+    "Qual demanda vamos acompanhar hoje?"
+)
+
 
 # LINK CSV DA SUA PLANILHA PUBLICADA
 SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT7eJXK_IARZPmt6GdsQLDPX4sSI-aCWZK286Y4DtwhVXr3NOH22eTIPwkFSbF14rfdYReQndgU51st/pub?gid=0&single=true&output=csv"

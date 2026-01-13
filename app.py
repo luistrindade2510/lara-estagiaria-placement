@@ -12,10 +12,10 @@ with col1:
 
 with col2:
     st.markdown("## J.O.Y – Assistente do time de Placement")
-    st.caption("JOY — Agilidade no acompanhamento, precisão na entrega")
+    st.caption("J.O.Y — Agilidade no acompanhamento, precisão na entrega")
 
     st.markdown(
-        "Olá! Eu sou a **J.O.Y.**, assistente do time de Placement.  \n"
+        "Olá! Eu sou a **J.O.Y**, assistente do time de Placement.  \n"
         "Qual demanda vamos acompanhar hoje?"
     )
 

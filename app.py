@@ -3,28 +3,101 @@ import pandas as pd
 import streamlit as st
 
 # =========================
-# CONFIGURAÇÕES
+# CONFIGURAÇÕES BÁSICAS
 # =========================
-col1, col2 = st.columns([1, 3])
+st.set_page_config(
+    page_title="JOY – Assistente do time de Placement",
+    page_icon="💬",
+    layout="centered",
+)
 
-with col1:
-    st.image("joy.png", use_container_width=True)
+# =========================
+# CSS (VISUAL MAIS BONITO)
+# =========================
+st.markdown(
+    """
+<style>
+/* Centraliza melhor e dá cara de produto */
+.block-container { padding-top: 2rem; padding-bottom: 2rem; max-width: 980px; }
 
-with col2:
-    st.markdown("## J.O.Y – Assistente Placement Jr")
-    st.caption("J.O.Y — Agilidade no acompanhamento, precisão na entrega")
+/* Card bonito */
+.joy-card{
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 18px;
+  padding: 18px 18px;
+  background: rgba(255,255,255,.75);
+  box-shadow: 0 10px 25px rgba(0,0,0,.06);
+}
+
+/* Chips / tags */
+.joy-chip{
+  display:inline-block;
+  padding: 6px 10px;
+  margin: 4px 6px 0 0;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,.10);
+  background: rgba(255,255,255,.9);
+  font-size: 13px;
+}
+
+/* Texto menor bonito */
+.joy-muted{ color: rgba(0,0,0,.60); font-size: 14px; }
+
+/* Ajuste do campo do chat */
+.stChatInput{ margin-top: 1rem; }
+</style>
+""",
+    unsafe_allow_html=True,
+)
+
+# =========================
+# TOPO (CARD + IMAGEM + BOAS-VINDAS)
+# =========================
+st.markdown('<div class="joy-card">', unsafe_allow_html=True)
+
+c1, c2 = st.columns([1, 3], vertical_alignment="center")
+
+with c1:
+    # Evita quebrar se a imagem não estiver no repo
+    try:
+        st.image("joy.png", use_container_width=True)
+    except Exception:
+        st.write("")
+
+with c2:
+    st.markdown("## 💬 JOY – Assistente Placement Jr")
+    st.markdown(
+        '<div class="joy-muted">J.O.Y. — Agilidade no acompanhamento, precisão na entrega</div>',
+        unsafe_allow_html=True,
+    )
 
     st.markdown(
         "Olá! Eu sou a **J.O.Y**, assistente do time de Placement.  \n"
         "Qual demanda vamos acompanhar hoje?"
     )
 
+    st.markdown("**Exemplos de consulta:**")
+    st.markdown(
+        """
+<span class="joy-chip">6163</span>
+<span class="joy-chip">6163 histórico</span>
+<span class="joy-chip">Leadace</span>
+<span class="joy-chip">Leadace saúde</span>
+<span class="joy-chip">Leadace odonto</span>
+<span class="joy-chip">desde 10/01/2026</span>
+""",
+        unsafe_allow_html=True,
+    )
 
+st.markdown("</div>", unsafe_allow_html=True)
 
-# LINK CSV DA SUA PLANILHA PUBLICADA
+st.write("")  # espaçamento leve
+
+# =========================
+# DADOS (SHEETS)
+# =========================
 SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT7eJXK_IARZPmt6GdsQLDPX4sSI-aCWZK286Y4DtwhVXr3NOH22eTIPwkFSbF14rfdYReQndgU51st/pub?gid=0&single=true&output=csv"
 
-# Colunas (do seu print)
 COL_ID = "COD_ACRISURE"
 COL_DATE = "DATA_ATUALIZACAO"
 COL_EMPRESA = "EMPRESA"
@@ -40,6 +113,7 @@ def load_data(url: str) -> pd.DataFrame:
     df = pd.read_csv(url)
     df.columns = [c.strip() for c in df.columns]
 
+    # Ajustes de tipos
     df[COL_DATE] = pd.to_datetime(df[COL_DATE], errors="coerce", dayfirst=True)
     df[COL_ID] = df[COL_ID].astype(str).str.strip()
 
@@ -69,7 +143,7 @@ def parse_user_message(msg: str):
     if mdate:
         try:
             date_exact = pd.to_datetime(mdate.group(1), dayfirst=True)
-        except:
+        except Exception:
             date_exact = None
 
     # Desde: "desde 10/01/2026"
@@ -78,7 +152,7 @@ def parse_user_message(msg: str):
     if msince:
         try:
             date_since = pd.to_datetime(msince.group(1), dayfirst=True)
-        except:
+        except Exception:
             date_since = None
 
     # ID: primeiro número com 3+ dígitos
@@ -141,16 +215,22 @@ def format_history(df_hist: pd.DataFrame) -> str:
     return "\n".join(lines)
 
 
+# =========================
+# CHAT
+# =========================
 df = load_data(SHEETS_CSV_URL)
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# Render histórico do chat
 for m in st.session_state.messages:
     with st.chat_message(m["role"]):
         st.markdown(m["content"])
 
-user_msg = st.chat_input("Digite um ID (ex: 6163) ou a empresa. Ex: '6163 histórico' | 'Leadace saúde desde 10/01/2026'")
+user_msg = st.chat_input(
+    "Digite um ID (ex: 6163) ou a empresa. Ex: '6163 histórico' | 'Leadec saúde desde 10/01/2026'"
+)
 
 if user_msg:
     st.session_state.messages.append({"role": "user", "content": user_msg})
@@ -162,7 +242,11 @@ if user_msg:
 
     with st.chat_message("assistant"):
         if result.empty:
-            st.markdown("Não encontrei nada com esses critérios. Tenta só o ID (ex: **6163**) ou só parte do nome da empresa.")
+            st.markdown(
+                "Nossa, não consegui encontrar nenhuma demanda do time com esses critérios. "
+                "Posso dar uma ajudinha? Tenta só o ID (ex: **6163**) ou só parte do nome da empresa/cliente."
+                "Ai eu revejo aqui para você, fechado?"
+            )
         else:
             if historico:
                 st.markdown(format_history(result))

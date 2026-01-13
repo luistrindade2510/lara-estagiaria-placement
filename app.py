@@ -1,7 +1,6 @@
 import re
 import base64
 from pathlib import Path
-
 import pandas as pd
 import streamlit as st
 
@@ -14,8 +13,8 @@ st.set_page_config(
     layout="centered",
 )
 
-VIDEO_TOP = "joy_idle.mp4"
-VIDEO_RESULT = "joy_success.mp4"
+VIDEO_TOP = "joy_idle.mp4"         # topo (sempre)
+VIDEO_RESULT = "joy_success.mp4"   # só quando tem resultado
 
 SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT7eJXK_IARZPmt6GdsQLDPX4sSI-aCWZK286Y4DtwhVXr3NOH22eTIPwkFSbF14rfdYReQndgU51st/pub?gid=0&single=true&output=csv"
 
@@ -29,20 +28,20 @@ COL_STATUS = "STATUS"
 COL_TEXTO = "TEXTO"
 
 # =========================
-# CSS PREMIUM (DE VERDADE)
+# CSS (Premium de verdade)
 # =========================
 st.markdown(
     """
 <style>
-.block-container{max-width:980px;padding-top:1.1rem;padding-bottom:2.2rem}
+.block-container{max-width:980px;padding-top:1.1rem;padding-bottom:2.0rem}
 
 /* HERO */
 .joy-hero{
   border:1px solid rgba(0,0,0,.07);
   border-radius:20px;
   padding:16px 16px;
-  background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.88));
-  box-shadow:0 12px 30px rgba(0,0,0,.06);
+  background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.90));
+  box-shadow:0 14px 34px rgba(0,0,0,.06);
 }
 .joy-hero-row{display:flex;gap:14px;align-items:center}
 .joy-avatar{
@@ -50,20 +49,18 @@ st.markdown(
   overflow:hidden;
   border:1px solid rgba(0,0,0,.08);
   box-shadow:0 10px 18px rgba(0,0,0,.06);
-  background:#fff;
-  flex:0 0 auto;
+  background:#fff; flex:0 0 auto;
 }
 .joy-avatar video{width:64px;height:64px;object-fit:cover;display:block}
 
-/* TITULOS */
-.joy-title{margin:0;font-size:24px;font-weight:780;line-height:1.12}
-.joy-tagline{margin-top:4px;color:rgba(0,0,0,.62);font-size:13px}
+.joy-title{margin:0;font-size:24px;font-weight:800;line-height:1.12}
+.joy-sub{margin-top:4px;color:rgba(0,0,0,.62);font-size:13px}
 .joy-help{margin-top:10px;color:rgba(0,0,0,.86);font-size:14px;line-height:1.45}
-.joy-help b{font-weight:740}
+.joy-help b{font-weight:780}
 
-/* SEARCH BAR PREMIUM */
-.joy-search-wrap{margin-top:14px}
-.joy-search-label{font-size:13px;color:rgba(0,0,0,.62);margin-bottom:6px}
+/* SEARCH */
+.joy-search{margin-top:14px}
+.joy-label{font-size:13px;color:rgba(0,0,0,.62);margin-bottom:6px}
 div[data-testid="stTextInput"] input{
   border-radius:14px !important;
   border:1px solid rgba(0,0,0,.10) !important;
@@ -73,16 +70,15 @@ div[data-testid="stTextInput"] input:focus{
   border:1px solid rgba(0,0,0,.20) !important;
   box-shadow:0 0 0 4px rgba(0,0,0,.06) !important;
 }
-
-/* BOTAO BUSCAR */
 .joy-btn > button{
   border-radius:14px !important;
   padding:10px 14px !important;
   border:1px solid rgba(0,0,0,.10) !important;
+  font-weight:650 !important;
 }
 
-/* SUGESTOES */
-.joy-suggestions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+/* PILLS */
+.joy-pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .joy-pill > button{
   border-radius:999px !important;
   padding:6px 10px !important;
@@ -90,9 +86,11 @@ div[data-testid="stTextInput"] input:focus{
   font-size:12.5px !important;
 }
 
-/* FILTROS */
-.joy-section-title{font-weight:760;margin-top:14px;margin-bottom:8px;font-size:14px}
+/* FILTERS */
+.joy-section{margin-top:14px}
+.joy-section-title{font-weight:780;margin:0 0 6px 0;font-size:14px}
 .joy-muted{color:rgba(0,0,0,.58);font-size:12.8px}
+
 .joy-filters{
   border:1px solid rgba(0,0,0,.07);
   border-radius:18px;
@@ -109,16 +107,30 @@ div[data-testid="stTextInput"] input:focus{
   font-size:12px;
 }
 
-/* RESULTADO CARD */
+/* RESULT CARD */
 .joy-card{
+  margin-top:14px;
   border:1px solid rgba(0,0,0,.07);
   border-radius:18px;
   padding:14px 14px;
   background:rgba(255,255,255,.92);
   box-shadow:0 10px 22px rgba(0,0,0,.05);
 }
-.joy-card-title{font-weight:780;font-size:14px;margin:0}
+.joy-card-head{
+  display:flex; justify-content:space-between; align-items:flex-start; gap:12px;
+}
+.joy-card-title{font-weight:820;font-size:14px;margin:0}
+.joy-badge{
+  display:inline-block;
+  padding:5px 10px;
+  border-radius:999px;
+  border:1px solid rgba(0,0,0,.10);
+  background:rgba(0,0,0,.03);
+  font-size:12px;
+}
+
 .joy-hr{margin:12px 0;border-bottom:1px solid rgba(0,0,0,.07)}
+
 .joy-grid{
   display:grid;
   grid-template-columns:120px 1fr;
@@ -127,31 +139,22 @@ div[data-testid="stTextInput"] input:focus{
 }
 .joy-grid b{color:rgba(0,0,0,.78)}
 .joy-grid span{color:rgba(0,0,0,.90)}
-.joy-badge{
-  display:inline-block;
-  padding:5px 10px;
-  border-radius:999px;
-  border:1px solid rgba(0,0,0,.10);
-  background:rgba(0,0,0,.03);
-  font-size:12px;
-  margin-left:8px;
+
+.joy-result-video{
+  width:92px;height:92px;border-radius:18px;overflow:hidden;
+  border:1px solid rgba(0,0,0,.08);
+  box-shadow:0 10px 18px rgba(0,0,0,.06);
+  flex:0 0 auto;
 }
+.joy-result-video video{width:92px;height:92px;object-fit:cover;display:block}
 
-/* VIDEO RESULT PEQUENO */
-.joy-result-video{width:110px;border-radius:16px;overflow:hidden;border:1px solid rgba(0,0,0,.08);box-shadow:0 10px 18px rgba(0,0,0,.06)}
-.joy-result-video video{width:110px;height:110px;object-fit:cover;display:block}
-
-/* CHAT (deixa mais limpo) */
-[data-testid="stChatMessage"]{margin-top:10px}
-.stChatInput{margin-top:12px}
-.stChatInput textarea{border-radius:14px !important}
 </style>
 """,
     unsafe_allow_html=True,
 )
 
 # =========================
-# VIDEO LOOP (base64)
+# VIDEO base64
 # =========================
 @st.cache_data(show_spinner=False)
 def video_to_data_url(path: str) -> str:
@@ -159,12 +162,11 @@ def video_to_data_url(path: str) -> str:
     b64 = base64.b64encode(data).decode("utf-8")
     return f"data:video/mp4;base64,{b64}"
 
-def video_loop_square(path: str, size_px: int = 64):
-    """Avatar do topo (quadradinho arredondado)."""
+def render_avatar_video(path: str):
     try:
         url = video_to_data_url(path)
     except Exception:
-        st.markdown(f"<div class='joy-avatar'></div>", unsafe_allow_html=True)
+        st.markdown("<div class='joy-avatar'></div>", unsafe_allow_html=True)
         return
     st.markdown(
         f"""
@@ -177,37 +179,21 @@ def video_loop_square(path: str, size_px: int = 64):
         unsafe_allow_html=True,
     )
 
-def video_loop_result(path: str, size_px: int = 110):
-    """Video do resultado (aparece só quando tem resposta)."""
+def render_result_video(path: str):
     try:
         url = video_to_data_url(path)
     except Exception:
-        return
-    st.markdown(
-        f"""
+        return ""
+    return f"""
 <div class="joy-result-video">
   <video autoplay muted loop playsinline preload="auto">
     <source src="{url}" type="video/mp4">
   </video>
 </div>
-""",
-        unsafe_allow_html=True,
-    )
+"""
 
 # =========================
-# STATE
-# =========================
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "quick_produto" not in st.session_state:
-    st.session_state.quick_produto = None
-if "quick_hist" not in st.session_state:
-    st.session_state.quick_hist = False
-if "query" not in st.session_state:
-    st.session_state.query = ""
-
-# =========================
-# LOAD DATA
+# DATA
 # =========================
 @st.cache_data(ttl=60, show_spinner=False)
 def load_data(url: str) -> pd.DataFrame:
@@ -223,7 +209,17 @@ def load_data(url: str) -> pd.DataFrame:
 df = load_data(SHEETS_CSV_URL)
 
 # =========================
-# PARSE & FILTER
+# STATE
+# =========================
+if "query" not in st.session_state:
+    st.session_state.query = ""
+if "quick_produto" not in st.session_state:
+    st.session_state.quick_produto = None
+if "quick_hist" not in st.session_state:
+    st.session_state.quick_hist = False
+
+# =========================
+# PARSE
 # =========================
 def parse_user_message(msg: str):
     m = msg.strip()
@@ -265,21 +261,17 @@ def filter_df(df: pd.DataFrame, demanda_id=None, empresa_term=None, produto=None
 
     if demanda_id:
         out = out[out[COL_ID] == str(demanda_id)]
-
     if empresa_term:
         term = empresa_term.lower()
         out = out[out[COL_EMPRESA].str.lower().str.contains(term, na=False)]
-
     if produto and produto != "AMBOS":
         out = out[out[COL_PRODUTO].str.lower().str.contains(produto.lower(), na=False)]
-
     if date_since is not None:
         out = out[out[COL_DATE] >= date_since]
 
-    out = out.sort_values(by=COL_DATE, ascending=False)
-    return out
+    return out.sort_values(by=COL_DATE, ascending=False)
 
-def status_badge(status: str) -> str:
+def badge_text(status: str) -> str:
     s = (status or "").upper()
     if "CONCLU" in s:
         return "Concluído"
@@ -290,54 +282,49 @@ def status_badge(status: str) -> str:
     return status.title() if status else "—"
 
 # =========================
-# HERO (compacto + premium)
+# HERO
 # =========================
 st.markdown("<div class='joy-hero'>", unsafe_allow_html=True)
 st.markdown("<div class='joy-hero-row'>", unsafe_allow_html=True)
-video_loop_square(VIDEO_TOP)
+render_avatar_video(VIDEO_TOP)
 
 st.markdown(
     """
 <div>
   <div class="joy-title">J.O.Y – Assistente Placement Jr</div>
-  <div class="joy-tagline">Acompanhe demandas com status, histórico e última atualização — sem depender de mensagens no Teams.</div>
+  <div class="joy-sub">Status, histórico e andamento dos estudos — sem depender de mensagens no Teams.</div>
   <div class="joy-help">
     <b>Pesquise</b> por <b>ID</b> ou <b>empresa</b>.  
-    Para refinar, use <b>saúde</b>/<b>odonto</b>, <b>histórico</b> e <b>desde dd/mm/aaaa</b>.
+    Para refinar: <b>saúde</b>/<b>odonto</b>, <b>histórico</b>, <b>desde dd/mm/aaaa</b>.
   </div>
 </div>
 """,
     unsafe_allow_html=True,
 )
-
 st.markdown("</div>", unsafe_allow_html=True)
 
-# =========================
-# SEARCH BAR PREMIUM (principal)
-# =========================
-st.markdown("<div class='joy-search-wrap'>", unsafe_allow_html=True)
-st.markdown("<div class='joy-search-label'>🔎 Onde você quer que eu olhe agora?</div>", unsafe_allow_html=True)
+# Search
+st.markdown("<div class='joy-search'>", unsafe_allow_html=True)
+st.markdown("<div class='joy-label'>🔎 O que vamos consultar agora?</div>", unsafe_allow_html=True)
 
-c_in, c_btn = st.columns([5, 1.25])
+c_in, c_btn = st.columns([5.3, 1.3])
 with c_in:
     st.session_state.query = st.text_input(
         label="",
         value=st.session_state.query,
-        placeholder="Digite o ID ou empresa… Ex.: 6163 | Leadec | Leadec saúde | desde 10/01/2026",
+        placeholder="Ex.: 6163 | Leadec | Leadec saúde | 6163 histórico | desde 10/01/2026",
     )
 with c_btn:
     st.markdown("<div class='joy-btn'>", unsafe_allow_html=True)
     do_search = st.button("Buscar", use_container_width=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-st.markdown("</div>", unsafe_allow_html=True)
-
-# Sugestões (clicáveis)
-st.markdown("<div class='joy-suggestions'>", unsafe_allow_html=True)
-sug_cols = st.columns(6)
-sugs = ["6163", "6163 histórico", "Leadec", "Leadec saúde", "Leadec odonto", "Leadec desde 10/01/2026"]
+# Sugestões
+st.markdown("<div class='joy-pills'>", unsafe_allow_html=True)
+pill_cols = st.columns(6)
+sugs = ["6163", "6163 histórico", "Leadec", "Leadec saúde", "Leadec odonto", "desde 10/01/2026"]
 for i, s in enumerate(sugs):
-    with sug_cols[i]:
+    with pill_cols[i]:
         st.markdown("<div class='joy-pill'>", unsafe_allow_html=True)
         if st.button(s, use_container_width=True):
             st.session_state.query = s
@@ -348,10 +335,11 @@ st.markdown("</div>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)  # fecha hero
 
 # =========================
-# FILTROS (mais clean)
+# FILTROS
 # =========================
-st.markdown("<div class='joy-section-title'>🎛️ Refine sua consulta</div>", unsafe_allow_html=True)
-st.markdown("<div class='joy-muted'>Aplique filtros e depois clique em <b>Buscar</b>.</div>", unsafe_allow_html=True)
+st.markdown("<div class='joy-section'>", unsafe_allow_html=True)
+st.markdown("<div class='joy-section-title'>🎛️ Refine</div>", unsafe_allow_html=True)
+st.markdown("<div class='joy-muted'>Use os botões e depois clique em <b>Buscar</b>.</div>", unsafe_allow_html=True)
 
 st.markdown("<div class='joy-filters'>", unsafe_allow_html=True)
 b1, b2, b3, b4, b5 = st.columns(5)
@@ -386,24 +374,13 @@ st.markdown(
     unsafe_allow_html=True,
 )
 st.markdown("</div>", unsafe_allow_html=True)
+st.markdown("</div>", unsafe_allow_html=True)
 
 # =========================
-# CHAT HISTORY (se quiser manter)
-# =========================
-for m in st.session_state.messages:
-    with st.chat_message(m["role"]):
-        st.markdown(m["content"])
-
-# =========================
-# EXECUTA BUSCA (sem vídeo no loading!)
+# RESULTADO (SÓ 1 CARD)
 # =========================
 if do_search and st.session_state.query.strip():
     q = st.session_state.query.strip()
-
-    # registra no chat
-    st.session_state.messages.append({"role": "user", "content": q})
-    with st.chat_message("user"):
-        st.markdown(q)
 
     demanda_id, empresa_term, produto, historico, date_since = parse_user_message(q)
 
@@ -413,56 +390,70 @@ if do_search and st.session_state.query.strip():
     if not historico and st.session_state.quick_hist:
         historico = True
 
-    # loading só com texto (sem vídeo)
-    with st.chat_message("assistant"):
-        st.markdown("Beleza — tô puxando os dados aqui rapidinho 🔎")
-
     result = filter_df(df, demanda_id, empresa_term, produto, date_since)
 
-    with st.chat_message("assistant"):
-        if result.empty:
-            st.markdown(
-                "Não achei nada com esses critérios 😅\n\n"
-                "Tenta assim:\n"
-                "- só o **ID** (ex: **6163**)\n"
-                "- ou só a empresa (ex: **Leadec**)\n"
-                "- ou adiciona **saúde/odonto**"
+    if result.empty:
+        st.markdown("<div class='joy-card'>", unsafe_allow_html=True)
+        st.markdown("<div class='joy-card-title'>😅 Nada encontrado</div>", unsafe_allow_html=True)
+        st.markdown("<div class='joy-hr'></div>", unsafe_allow_html=True)
+        st.markdown(
+            "Tenta assim:\n"
+            "- só o **ID** (ex: **6163**)\n"
+            "- ou só a empresa (ex: **Leadec**)\n"
+            "- ou adiciona **saúde/odonto**"
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    else:
+        # Cabeçalho + vídeo integrado NO card
+        vid_html = render_result_video(VIDEO_RESULT)
+
+        if historico:
+            view = result[[COL_DATE, COL_STATUS, COL_PRODUTO, COL_AUTOR, COL_TEXTO]].copy()
+            view[COL_DATE] = view[COL_DATE].dt.strftime("%d/%m/%Y")
+            view = view.rename(
+                columns={
+                    COL_DATE: "Data",
+                    COL_STATUS: "Status",
+                    COL_PRODUTO: "Produto",
+                    COL_AUTOR: "Autor",
+                    COL_TEXTO: "Atualização",
+                }
             )
+
+            st.markdown("<div class='joy-card'>", unsafe_allow_html=True)
+            st.markdown(
+                f"""
+<div class="joy-card-head">
+  <div>
+    <div class="joy-card-title">🗂️ Histórico</div>
+    <div class="joy-muted">Mais recente primeiro</div>
+  </div>
+  {vid_html}
+</div>
+<div class="joy-hr"></div>
+""",
+                unsafe_allow_html=True,
+            )
+            st.dataframe(view, use_container_width=True, hide_index=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+
         else:
-            # ✅ vídeo só no resultado
-            video_loop_result(VIDEO_RESULT)
+            r = result.iloc[0]
+            d = r[COL_DATE].strftime("%d/%m/%Y") if pd.notna(r[COL_DATE]) else "—"
+            badge = badge_text(r[COL_STATUS])
 
-            if historico:
-                view = result[[COL_DATE, COL_STATUS, COL_PRODUTO, COL_AUTOR, COL_TEXTO]].copy()
-                view[COL_DATE] = view[COL_DATE].dt.strftime("%d/%m/%Y")
-                view = view.rename(
-                    columns={
-                        COL_DATE: "Data",
-                        COL_STATUS: "Status",
-                        COL_PRODUTO: "Produto",
-                        COL_AUTOR: "Autor",
-                        COL_TEXTO: "Atualização",
-                    }
-                )
-                st.markdown("<div class='joy-card'>", unsafe_allow_html=True)
-                st.markdown("<div class='joy-card-title'>🗂️ Histórico (mais recente primeiro)</div>", unsafe_allow_html=True)
-                st.markdown("<div class='joy-hr'></div>", unsafe_allow_html=True)
-                st.dataframe(view, use_container_width=True, hide_index=True)
-                st.markdown("</div>", unsafe_allow_html=True)
-            else:
-                r = result.iloc[0]
-                d = r[COL_DATE].strftime("%d/%m/%Y") if pd.notna(r[COL_DATE]) else "—"
-                badge = status_badge(r[COL_STATUS])
-
-                st.markdown("<div class='joy-card'>", unsafe_allow_html=True)
-                st.markdown(
-                    f"<div class='joy-card-title'>📌 Última atualização <span class='joy-badge'>{badge}</span></div>",
-                    unsafe_allow_html=True,
-                )
-                st.markdown("<div class='joy-hr'></div>", unsafe_allow_html=True)
-
-                st.markdown(
-                    f"""
+            st.markdown("<div class='joy-card'>", unsafe_allow_html=True)
+            st.markdown(
+                f"""
+<div class="joy-card-head">
+  <div>
+    <div class="joy-card-title">📌 Última atualização <span class="joy-badge">{badge}</span></div>
+    <div class="joy-muted">Consulta: <b>{q}</b></div>
+  </div>
+  {vid_html}
+</div>
+<div class="joy-hr"></div>
 <div class="joy-grid">
   <b>ID</b><span>{r[COL_ID]}</span>
   <b>Empresa</b><span>{r[COL_EMPRESA]}</span>
@@ -476,18 +467,6 @@ if do_search and st.session_state.query.strip():
 <b>Resumo</b><br>
 <span>{r[COL_TEXTO]}</span>
 """,
-                    unsafe_allow_html=True,
-                )
-                st.markdown("</div>", unsafe_allow_html=True)
-
-    # guarda resposta no histórico (opcional)
-    st.session_state.messages.append({"role": "assistant", "content": "✅ Consulta executada."})
-
-# =========================
-# BACKUP: chat_input (se quiser manter também)
-# =========================
-st.caption("Opcional: você também pode usar o campo abaixo (modo chat).")
-chat_msg = st.chat_input("Modo chat — ex.: 6163 | Leadec | Leadec saúde | desde 10/01/2026")
-if chat_msg:
-    st.session_state.query = chat_msg
-    st.rerun()
+                unsafe_allow_html=True,
+            )
+            st.markdown("</div>", unsafe_allow_html=True)

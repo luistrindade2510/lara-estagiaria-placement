@@ -5,15 +5,20 @@ import streamlit as st
 # =========================
 # CONFIGURAÇÕES
 # =========================
-st.set_page_config(page_title="JOY - Assistente do time de Placement", page_icon="💬", layout="centered")
+col1, col2 = st.columns([1, 3])
 
-st.title("💬 JOY – Assistente do time de Placement")
-st.caption("J.O.Y. — Agilidade no acompanhamento, precisão na entrega")
+with col1:
+    st.image("joy.png", use_container_width=True)
 
-st.markdown(
-    "Olá! Eu sou a **J.O.Y.**, assistente do time de Placement.  \n"
-    "Qual demanda vamos acompanhar hoje?"
-)
+with col2:
+    st.markdown("## 💬 JOY – Assistente do time de Placement")
+    st.caption("J.O.Y. — Agilidade no acompanhamento, precisão na entrega")
+
+    st.markdown(
+        "Olá! Eu sou a **J.O.Y.**, assistente do time de Placement.  \n"
+        "Qual demanda vamos acompanhar hoje?"
+    )
+
 
 
 # LINK CSV DA SUA PLANILHA PUBLICADA

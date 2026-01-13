@@ -1,5 +1,8 @@
 import re
 import time
+import base64
+from pathlib import Path
+
 import pandas as pd
 import streamlit as st
 
@@ -31,8 +34,7 @@ st.markdown(
 
 /* Texto */
 .joy-muted{ color: rgba(0,0,0,.60); font-size: 14px; margin-top: 4px; }
-.joy-title{ margin: 0; }
-.joy-lead{ font-size: 16px; margin-top: 8px; }
+.joy-lead{ font-size: 16px; margin-top: 8px; line-height: 1.35; }
 
 /* Chips */
 .joy-chip{
@@ -88,19 +90,29 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # =========================
-# FUNÇÃO: VÍDEO EM LOOP (HTML)
+# VÍDEO EM LOOP (base64 → funciona no Streamlit Cloud)
 # =========================
+@st.cache_data(show_spinner=False)
+def video_to_data_url(path: str) -> str:
+    data = Path(path).read_bytes()
+    b64 = base64.b64encode(data).decode("utf-8")
+    return f"data:video/mp4;base64,{b64}"
+
 def loop_video_html(path: str, width_px: int = 150):
     """
     Mostra vídeo pequeno em loop/autoplay/muted.
-    - autoplay só funciona bem com muted
-    - loop garantido pelo HTML
+    Usa base64 para funcionar no Streamlit Cloud.
     """
+    try:
+        url = video_to_data_url(path)
+    except Exception:
+        return  # se não achar o arquivo, só não mostra
+
     st.markdown(
         f"""
 <div class="joy-video-wrap">
-  <video class="joy-video" width="{width_px}" autoplay muted loop playsinline>
-    <source src="{path}" type="video/mp4">
+  <video class="joy-video" width="{width_px}" autoplay muted loop playsinline preload="auto">
+    <source src="{url}" type="video/mp4">
   </video>
 </div>
 """,
@@ -115,15 +127,11 @@ st.markdown('<div class="joy-card">', unsafe_allow_html=True)
 c1, c2 = st.columns([1, 3], vertical_alignment="center")
 
 with c1:
-    # vídeo pequeno, sempre no tamanho da imagem antiga
-    # (no topo, a gente deixa o idle sempre rodando; os estados mudam dentro do chat)
-    try:
-        loop_video_html(VIDEO_IDLE, width_px=150)
-    except Exception:
-        st.write("")
+    # vídeo pequeno, no tamanho da imagem antiga
+    loop_video_html(VIDEO_IDLE, width_px=150)
 
 with c2:
-    st.markdown("## 💬 JOY – Assistente Placement Jr")
+    st.markdown("## J.O.Y – Assistente Placement Jr")
     st.markdown(
         '<div class="joy-muted">Status, histórico e andamento dos estudos — sem depender de mensagens no Teams.</div>',
         unsafe_allow_html=True,
@@ -150,7 +158,7 @@ with c2:
 st.markdown("</div>", unsafe_allow_html=True)
 
 # =========================
-# FILTROS RÁPIDOS (CLAROS)
+# FILTROS RÁPIDOS
 # =========================
 st.markdown('<div class="joy-section-title">🎛️ Refine sua consulta</div>', unsafe_allow_html=True)
 st.markdown(
@@ -209,7 +217,7 @@ COL_AUTOR = "AUTOR"
 COL_STATUS = "STATUS"
 COL_TEXTO = "TEXTO"
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=60, show_spinner=False)
 def load_data(url: str) -> pd.DataFrame:
     df = pd.read_csv(url)
     df.columns = [c.strip() for c in df.columns]
@@ -313,13 +321,14 @@ def format_history(df_hist: pd.DataFrame) -> str:
     for _, r in df_hist.iterrows():
         d = r[COL_DATE]
         d_str = d.strftime("%d/%m/%Y") if pd.notna(d) else "—"
-        lines.append(f"- **{d_str}** | **{r[COL_STATUS]}** | {r[COL_TEXTO]} _(por {r[COL_AUTOR]})_")
+        lines.append(
+            f"- **{d_str}** | **{r[COL_STATUS]}** | {r[COL_TEXTO]} _(por {r[COL_AUTOR]})_"
+        )
     return "\n".join(lines)
 
 # =========================
 # CHAT
 # =========================
-# Render histórico do chat
 for m in st.session_state.messages:
     with st.chat_message(m["role"]):
         st.markdown(m["content"])
@@ -338,13 +347,10 @@ if user_msg:
     with st.chat_message("user"):
         st.markdown(user_msg)
 
-    # estado "loading" (vídeo dentro da resposta)
+    # vídeo/loading dentro da resposta
     with st.chat_message("assistant"):
         st.markdown("Só um segundo… tô puxando os dados aqui 🔎")
-        try:
-            loop_video_html(VIDEO_LOADING, width_px=180)
-        except Exception:
-            pass
+        loop_video_html(VIDEO_LOADING, width_px=180)
 
     time.sleep(0.6)
 
@@ -360,13 +366,16 @@ if user_msg:
 
     with st.chat_message("assistant"):
         if result.empty:
-            st.markdown("Não encontrei nada com esses critérios 😅 Tenta só o **ID** (ex: 6163) ou só parte da empresa (ex: **Leadec**).")
+            st.markdown(
+                "Não encontrei nada com esses critérios 😅\n\n"
+                "Tenta assim:\n"
+                "- só o **ID** (ex: **6163**)\n"
+                "- ou só parte da empresa (ex: **Leadec**)\n"
+                "- ou adiciona **saúde / odonto** pra refinar"
+            )
         else:
-            # vídeo de sucesso pequeno (não gigante)
-            try:
-                loop_video_html(VIDEO_SUCCESS, width_px=180)
-            except Exception:
-                pass
+            # vídeo de sucesso pequeno
+            loop_video_html(VIDEO_SUCCESS, width_px=180)
 
             if historico:
                 st.markdown(format_history(result))

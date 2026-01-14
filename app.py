@@ -367,3 +367,4 @@ if user_msg:
                 st.markdown(format_history(result))
             else:
                 st.markdown(format_last_update(result.iloc[0]))
+

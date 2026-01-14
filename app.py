@@ -20,9 +20,7 @@ st.set_page_config(
 
 ASSET_DIR = Path("assets") / "lara"
 
-VIDEO_HERO = ASSET_DIR / "Lara_idle.mp4"          # topo: sempre o mesmo
-VIDEO_LOADING = ASSET_DIR / "Lara_loading.mp4"    # loading (opcional)
-VIDEO_SUCCESS_DEFAULT = ASSET_DIR / "Lara_success.mp4"
+VIDEO_HERO = ASSET_DIR / "Lara_idle.mp4"  # topo: sempre o mesmo
 
 SUCCESS_VARIANTS = [
     ASSET_DIR / "Lara_success.mp4",
@@ -30,7 +28,8 @@ SUCCESS_VARIANTS = [
     ASSET_DIR / "Lara_02.mp4",
 ]
 
-SHOW_LOADING_VIDEO = True  # se quiser só a mensagem, coloca False
+# “Corte” pra matar as linhas/contornos que aparecem nas bordas do vídeo
+VIDEO_CROP_PX = 1  # aumenta pra 2 se ainda aparecer
 
 SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT7eJXK_IARZPmt6GdsQLDPX4sSI-aCWZK286Y4DtwhVXr3NOH22eTIPwkFSbF14rfdYReQndgU51st/pub?gid=0&single=true&output=csv"
 
@@ -44,47 +43,47 @@ COL_STATUS = "STATUS"
 COL_TEXTO = "TEXTO"
 
 # =========================================================
-# CSS (premium + vídeo sem "quadro" + toolbar ícones)
+# CSS (premium + vídeo “sem quadro” + crop anti-linhas + toolbar)
 # =========================================================
 st.markdown(
-    """
+    f"""
 <style>
-.block-container{
+.block-container{{
   padding-top: 1.2rem;
   padding-bottom: 1.2rem;
   max-width: 1040px;
-}
+}}
 
 /* Card topo */
-.joy-card{
+.joy-card{{
   border: 1px solid rgba(0,0,0,.08);
   border-radius: 18px;
   padding: 18px 18px 14px 18px;
   background: rgba(255,255,255,.92);
   box-shadow: 0 14px 35px rgba(0,0,0,.06);
-}
+}}
 
-.joy-title{
+.joy-title{{
   font-size: 30px;
   line-height: 1.05;
   margin: 0 0 6px 0;
   font-weight: 900;
   letter-spacing: -0.3px;
-}
-.joy-sub{
+}}
+.joy-sub{{
   color: rgba(0,0,0,.62);
   font-size: 14px;
   margin: 0 0 8px 0;
-}
-.joy-lead{
+}}
+.joy-lead{{
   font-size: 15.5px;
   line-height: 1.35;
   margin: 0 0 10px 0;
-}
-.joy-lead b{ font-weight: 900; }
+}}
+.joy-lead b{{ font-weight: 900; }}
 
-/* Vídeo: reforço total pra não virar "player/quadro" */
-.joy-video-wrap{
+/* Vídeo: wrapper com fundo branco + overflow hidden + CROP pra matar linhas */
+.joy-video-wrap{{
   width: 165px;
   max-width: 165px;
   background: transparent !important;
@@ -92,108 +91,87 @@ st.markdown(
   box-shadow: none !important;
   padding: 0 !important;
   margin: 0 !important;
-  overflow: visible !important;
-}
-.joy-video{
+}}
+
+.joy-video-crop{{
+  width: 165px;
+  background: #fff !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+  border-radius: 0 !important;
+}}
+
+.joy-video{{
   width: 165px;
   height: auto;
-  border-radius: 0px !important;
   display:block;
-  background: transparent !important;
-  box-shadow: none !important;
-  outline: none !important;
+  background: #fff !important;
   border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
 
-  /* ajuda a evitar “linhas” por scaling em alguns browsers */
+  /* corta 1px (ou mais) das bordas pra remover “linhas” */
+  clip-path: inset({VIDEO_CROP_PX}px {VIDEO_CROP_PX}px {VIDEO_CROP_PX}px {VIDEO_CROP_PX}px);
+
+  /* ajuda contra artefatos por scaling */
   transform: translateZ(0);
   backface-visibility: hidden;
-  -webkit-font-smoothing: antialiased;
   object-fit: contain;
-}
+}}
 
 /* Search box */
-.joy-search-wrap{
+.joy-search-wrap{{
   margin-top: 12px;
   padding: 12px;
   border-radius: 14px;
   border: 1px solid rgba(0,0,0,.08);
   background: rgba(0,0,0,.02);
-}
+}}
 
-div[data-baseweb="input"] > div{
+div[data-baseweb="input"] > div{{
   border-radius: 14px !important;
-}
-div[data-baseweb="input"] input{
+}}
+div[data-baseweb="input"] input{{
   font-size: 15px !important;
   padding-top: 14px !important;
   padding-bottom: 14px !important;
-}
+}}
 
-.stButton button{
+.stButton button{{
   border-radius: 14px !important;
   height: 48px !important;
   font-weight: 900 !important;
   border: 1px solid rgba(0,0,0,.14) !important;
-}
-.stButton button:hover{
+}}
+.stButton button:hover{{
   border-color: rgba(0,0,0,.25) !important;
   transform: translateY(-1px);
-}
+}}
 
-/* Refine */
-.joy-refine{
-  margin-top: 14px;
-  border: 1px solid rgba(0,0,0,.08);
-  border-radius: 18px;
-  padding: 14px 14px 10px 14px;
-  background: rgba(255,255,255,.88);
-  box-shadow: 0 10px 25px rgba(0,0,0,.05);
-}
-.joy-refine-title{
-  font-weight: 950;
-  margin: 0 0 6px 0;
-  font-size: 16px;
-}
-.joy-refine-sub{
-  color: rgba(0,0,0,.58);
-  font-size: 13px;
-  margin: 0 0 10px 0;
-}
-.joy-badge{
-  display:inline-block;
-  padding: 6px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(0,0,0,.10);
-  background: rgba(255,255,255,.95);
-  font-size: 12.5px;
-  color: rgba(0,0,0,.70);
-  margin-right: 6px;
-}
-
-/* Result header + toolbar */
-.joy-result-card{
+/* Result card + toolbar */
+.joy-result-card{{
   margin-top: 14px;
   border: 1px solid rgba(0,0,0,.08);
   border-radius: 18px;
   padding: 14px 14px 12px 14px;
   background: rgba(255,255,255,.92);
   box-shadow: 0 14px 35px rgba(0,0,0,.06);
-}
+}}
 
-.joy-result-title{
+.joy-result-title{{
   font-size: 28px;
   font-weight: 950;
   margin: 0;
   letter-spacing: -0.35px;
-}
-.joy-result-sub{
+}}
+.joy-result-sub{{
   color: rgba(0,0,0,.55);
   font-size: 13.5px;
   margin-top: 6px;
-}
+}}
 
-/* Toolbar (ícones) */
-.joy-toolbar{
+.joy-toolbar{{
   display:flex;
   justify-content:flex-end;
   align-items:center;
@@ -204,8 +182,8 @@ div[data-baseweb="input"] input{
   border-radius: 12px;
   width: fit-content;
   margin-left: auto;
-}
-.joy-icon{
+}}
+.joy-icon{{
   display:inline-flex;
   width: 34px;
   height: 30px;
@@ -218,19 +196,19 @@ div[data-baseweb="input"] input{
   color: rgba(0,0,0,.70);
   font-size: 15px;
   line-height: 1;
-}
-.joy-icon:hover{
+}}
+.joy-icon:hover{{
   background: rgba(0,0,0,.05);
   border-color: rgba(0,0,0,.18);
   color: rgba(0,0,0,.88);
-}
+}}
 
 /* tabela */
-div[data-testid="stDataFrame"]{
+div[data-testid="stDataFrame"]{{
   border-radius: 14px;
   overflow: hidden;
   border: 1px solid rgba(0,0,0,.08);
-}
+}}
 </style>
 """,
     unsafe_allow_html=True,
@@ -239,17 +217,13 @@ div[data-testid="stDataFrame"]{
 # =========================================================
 # STATE
 # =========================================================
-if "quick_produto" not in st.session_state:
-    st.session_state.quick_produto = None
-
 if "pending_query" not in st.session_state:
     st.session_state.pending_query = ""
-
 if "last_run_id" not in st.session_state:
     st.session_state.last_run_id = 0
 
 # =========================================================
-# VIDEO LOOP (base64)
+# VIDEO (base64)
 # =========================================================
 @st.cache_data(show_spinner=False)
 def video_to_data_url(path: str) -> str:
@@ -258,7 +232,7 @@ def video_to_data_url(path: str) -> str:
     return f"data:video/mp4;base64,{b64}"
 
 def loop_video_html(path: Path, width_px: int = 165):
-    """Vídeo em loop/autoplay/muted, sem controles."""
+    """Vídeo em loop/autoplay/muted, sem controles e sem “quadro”."""
     try:
         url = video_to_data_url(str(path))
     except Exception:
@@ -266,9 +240,11 @@ def loop_video_html(path: Path, width_px: int = 165):
     st.markdown(
         f"""
 <div class="joy-video-wrap">
-  <video class="joy-video" width="{width_px}" autoplay muted loop playsinline preload="auto">
-    <source src="{url}" type="video/mp4">
-  </video>
+  <div class="joy-video-crop">
+    <video class="joy-video" width="{width_px}" autoplay muted loop playsinline preload="auto">
+      <source src="{url}" type="video/mp4">
+    </video>
+  </div>
 </div>
 """,
         unsafe_allow_html=True,
@@ -277,7 +253,7 @@ def loop_video_html(path: Path, width_px: int = 165):
 def pick_success_video(seed: int) -> Path:
     candidates = [p for p in SUCCESS_VARIANTS if p.exists()]
     if not candidates:
-        return VIDEO_SUCCESS_DEFAULT
+        return SUCCESS_VARIANTS[0]
     rng = random.Random(seed)
     return rng.choice(candidates)
 
@@ -317,7 +293,7 @@ def load_data(url: str) -> pd.DataFrame:
 df = load_data(SHEETS_CSV_URL)
 
 # =========================================================
-# PARSE/FILTER
+# PARSE/FILTER (continua aceitando: saúde/odonto/ambos + histórico + desde)
 # =========================================================
 def parse_user_message(msg: str):
     m = (msg or "").strip()
@@ -355,12 +331,6 @@ def parse_user_message(msg: str):
     return demanda_id, empresa_term, produto, historico, date_since
 
 def match_produto_series(prod_n: pd.Series, produto: str) -> pd.Series:
-    """
-    Regras:
-    - SAÚDE: tem SAUDE e NÃO tem ODONTO
-    - ODONTO: tem ODONTO e NÃO tem SAUDE
-    - AMBOS: tem SAUDE e tem ODONTO
-    """
     s = (
         prod_n.astype(str)
         .str.replace("&", " E ")
@@ -368,7 +338,6 @@ def match_produto_series(prod_n: pd.Series, produto: str) -> pd.Series:
         .str.replace("+", " ")
         .str.replace("-", " ")
     )
-
     has_saude = s.str.contains(r"\bSAUDE\b", na=False)
     has_odonto = s.str.contains(r"\bODONTO\b", na=False)
 
@@ -378,7 +347,6 @@ def match_produto_series(prod_n: pd.Series, produto: str) -> pd.Series:
         return has_odonto & (~has_saude)
     if produto == "AMBOS":
         return has_saude & has_odonto
-
     return pd.Series([True] * len(prod_n), index=prod_n.index)
 
 def filter_df(df_in: pd.DataFrame, demanda_id=None, empresa_term=None, produto=None, date_since=None):
@@ -386,14 +354,11 @@ def filter_df(df_in: pd.DataFrame, demanda_id=None, empresa_term=None, produto=N
 
     if demanda_id:
         out = out[out[COL_ID] == str(demanda_id)]
-
     if empresa_term:
         term = empresa_term.lower()
         out = out[out[COL_EMPRESA].str.lower().str.contains(term, na=False)]
-
     if produto:
         out = out[match_produto_series(out["_PRODUTO_N"], produto)]
-
     if date_since is not None:
         out = out[out[COL_DATE] >= date_since]
 
@@ -437,53 +402,18 @@ with c2:
                 "Pesquisar",
                 value=st.session_state.pending_query,
                 label_visibility="collapsed",
-                placeholder="Ex.: 6163 | Leadec | 6163 histórico | Leadec saúde",
+                placeholder="Ex.: 6163 | Leadec | 6163 histórico | Leadec saúde | Leadec ambos | Leadec desde 10/01/2026",
             )
         with s2:
             submitted = st.form_submit_button("Buscar", use_container_width=True)
 
-        st.caption("💡 Dica: use os filtros abaixo e depois clique em Buscar — não precisa redigitar.")
+        st.caption("💡 Dica: você pode digitar saúde/odonto/ambos, histórico e desde dd/mm/aaaa na própria busca.")
     st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown("</div>", unsafe_allow_html=True)
 
 # =========================================================
-# REFINE (sem botão de histórico)
-# =========================================================
-st.markdown('<div class="joy-refine">', unsafe_allow_html=True)
-st.markdown('<div class="joy-refine-title">🎛️ Refine sua consulta</div>', unsafe_allow_html=True)
-st.markdown(
-    '<div class="joy-refine-sub">Filtros de produto. Para histórico, digite “histórico” na busca.</div>',
-    unsafe_allow_html=True,
-)
-
-p1, p2, p3, p4 = st.columns([1.2, 1.2, 1.2, 1.2], vertical_alignment="center")
-with p1:
-    if st.button("🧽 Limpar", use_container_width=True):
-        st.session_state.quick_produto = None
-with p2:
-    if st.button("🩺 Saúde", use_container_width=True):
-        st.session_state.quick_produto = "SAÚDE"
-with p3:
-    if st.button("🦷 Odonto", use_container_width=True):
-        st.session_state.quick_produto = "ODONTO"
-with p4:
-    if st.button("🩺+🦷 Ambos", use_container_width=True):
-        st.session_state.quick_produto = "AMBOS"
-
-prod_txt = st.session_state.quick_produto if st.session_state.quick_produto else "—"
-st.markdown(
-    f"""
-<div style="margin-top:10px;">
-  <span class="joy-badge"><b>Produto:</b> {prod_txt}</span>
-</div>
-""",
-    unsafe_allow_html=True,
-)
-st.markdown("</div>", unsafe_allow_html=True)
-
-# =========================================================
-# RESULT RENDER
+# RESULT RENDER (só 1 vídeo no resultado)
 # =========================================================
 def render_result_header(title: str, consulta_label: str, csv_bytes: bytes, filename: str, success_video: Path):
     st.markdown('<div class="joy-result-card">', unsafe_allow_html=True)
@@ -523,6 +453,7 @@ def show_history(result: pd.DataFrame, consulta_label: str, success_video: Path)
 
     safe_label = re.sub(r"[^a-zA-Z0-9_-]+", "_", str(consulta_label))[:60] or "consulta"
     render_result_header("Histórico", consulta_label, csv_bytes, f"historico_{safe_label}.csv", success_video)
+
     st.dataframe(table, use_container_width=True, hide_index=True)
 
 def show_last_update(result: pd.DataFrame, consulta_label: str, success_video: Path):
@@ -560,15 +491,15 @@ def show_last_update(result: pd.DataFrame, consulta_label: str, success_video: P
 
 LOADING_PHRASES = [
     "Opa! Só um segundinho… deixa eu puxar isso aqui pra você 🔎",
-    "Já vi! Pera aí que eu tô consultando rapidinho 🔍",
-    "Beleza 😄 só um instante que eu já te trago isso.",
-    "Deixa comigo — tô checando agora ✨",
-    "Um segundo… tô puxando as atualizações pra você 📌",
-    "Certo! Só mais um instantinho 🧠",
-    "Tá na mão — consultando aqui rapidinho ⚡",
-    "Entendi! Já vou buscar pra você 🗂️",
-    "Ok! Só um segundinho que eu confiro agora 👀",
-    "Perfeito. Consultando… já já eu volto com o resultado ✅",
+    "Já vi 😄 um instante que eu consulto aqui rapidinho.",
+    "Fechou. Tô buscando as atualizações agora ✨",
+    "Entendi! Só um segundo que eu volto com o resultado 👀",
+    "Tá na mão — consultando aqui ⚡",
+    "Ok! Já já te trago isso certinho ✅",
+    "Beleza. Deixa comigo 🧠",
+    "Só um instantinho… tô checando 🗂️",
+    "Certo! Consultando agora 🔍",
+    "Perfeito. Já vou puxar pra você 📌",
 ]
 
 def run_query(q: str, run_seed: int):
@@ -577,18 +508,9 @@ def run_query(q: str, run_seed: int):
         st.warning("Digite um ID ou uma empresa para pesquisar.")
         return
 
-    # mensagem humana + (opcional) loading video
-    msg = random.Random(run_seed).choice(LOADING_PHRASES)
-    st.info(msg)
-    if SHOW_LOADING_VIDEO and VIDEO_LOADING.exists():
-        loop_video_html(VIDEO_LOADING, width_px=150)
+    st.info(random.Random(run_seed).choice(LOADING_PHRASES))
 
     demanda_id, empresa_term, produto, historico, date_since = parse_user_message(q)
-
-    # aplica refine se não veio no texto
-    if not produto and st.session_state.quick_produto:
-        produto = st.session_state.quick_produto
-
     result = filter_df(df, demanda_id, empresa_term, produto, date_since)
 
     if result.empty:
@@ -604,7 +526,7 @@ def run_query(q: str, run_seed: int):
         show_last_update(result, consulta_label, success_video)
 
 # =========================================================
-# RUN (garante “recarregar” resultado a cada busca)
+# RUN (recarrega resultado a cada busca)
 # =========================================================
 if "submitted" in locals() and submitted:
     st.session_state.last_run_id += 1

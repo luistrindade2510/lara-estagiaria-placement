@@ -140,6 +140,20 @@ with c2:
         '<div class="joy-lead"><b>Consulte estudos de Placement com clareza e rapidez.</b><br>'
         'Digite o código da demanda ou o nome da empresa para começar.</div>',
         unsafe_allow_html=True,
+    )
+
+    st.markdown("**Consultas comuns:**")
+    st.markdown(
+        """
+<span class="joy-chip">6163</span>
+<span class="joy-chip">6163 histórico</span>
+<span class="joy-chip">Leadec</span>
+<span class="joy-chip">Leadec saúde</span>
+<span class="joy-chip">Leadec odonto</span>
+<span class="joy-chip">Leadec desde 10/01/2026</span>
+""",
+        unsafe_allow_html=True,
+    )
 
 st.markdown("</div>", unsafe_allow_html=True)
 
@@ -367,4 +381,3 @@ if user_msg:
                 st.markdown(format_history(result))
             else:
                 st.markdown(format_last_update(result.iloc[0]))
-

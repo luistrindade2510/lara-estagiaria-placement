@@ -462,10 +462,6 @@ def show_history(result: pd.DataFrame, consulta_label: str):
 
     st.dataframe(table, use_container_width=True, hide_index=True)
 
-    with st.expander("💬 Abrir histórico (opcional)", expanded=False):
-        for _, r in result.iterrows():
-            d = r[COL_DATE].strftime("%d/%m/%Y") if pd.notna(r[COL_DATE]) else "—"
-            st.markdown(f"- **{d}** | **{r[COL_STATUS]}** | {r[COL_TEXTO]} _(por {r[COL_AUTOR]})_")
 
 def show_last_update(result: pd.DataFrame, consulta_label: str):
     r = result.iloc[0]

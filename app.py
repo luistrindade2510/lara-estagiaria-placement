@@ -1,4 +1,5 @@
 import re
+import base64
 import pandas as pd
 import streamlit as st
 
@@ -11,9 +12,8 @@ st.set_page_config(
     layout="centered",
 )
 
-# Arquivos no repo
-HERO_IMAGE = "joy.png"            # imagem do topo (pode trocar por png)
-RESULT_VIDEO = "joy_loading.mp4"  # vídeo pequeno APENAS no resultado (você pediu esse)
+HERO_IMAGE = "joy.png"
+RESULT_LOOP_VIDEO = "joy_loading.mp4"  # ou "joy_success.mp4"
 
 SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT7eJXK_IARZPmt6GdsQLDPX4sSI-aCWZK286Y4DtwhVXr3NOH22eTIPwkFSbF14rfdYReQndgU51st/pub?gid=0&single=true&output=csv"
 
@@ -25,6 +25,7 @@ COL_PRODUTO = "PRODUTO"
 COL_AUTOR = "AUTOR"
 COL_STATUS = "STATUS"
 COL_TEXTO = "TEXTO"
+
 
 # =========================
 # STATE
@@ -38,8 +39,9 @@ if "produto_seg" not in st.session_state:
 if "modo_seg" not in st.session_state:
     st.session_state.modo_seg = "Última atualização"  # Última atualização | Histórico
 
+
 # =========================
-# CSS (corrige chips quebrando + refine premium)
+# CSS (premium)
 # =========================
 st.markdown(
     """
@@ -47,85 +49,70 @@ st.markdown(
 .block-container{
   max-width: 980px;
   padding-top: 1.2rem;
-  padding-bottom: 2rem;
+  padding-bottom: 2.2rem;
 }
 
-/* Card topo */
+/* HERO */
 .joy-hero{
   border: 1px solid rgba(0,0,0,.08);
-  border-radius: 20px;
-  padding: 16px 16px;
+  border-radius: 22px;
+  padding: 18px 18px;
   background: rgba(255,255,255,.92);
-  box-shadow: 0 12px 30px rgba(0,0,0,.05);
+  box-shadow: 0 16px 36px rgba(0,0,0,.06);
 }
 
-/* Título / slogan */
 .joy-title{
-  font-size: 26px;
-  font-weight: 850;
-  line-height: 1.15;
+  font-size: 28px;
+  font-weight: 900;
   margin: 0;
+  line-height: 1.12;
 }
+
 .joy-slogan{
   margin-top: 6px;
-  font-size: 13px;
+  font-size: 13.5px;
   color: rgba(0,0,0,.58);
 }
+
 .joy-desc{
   margin-top: 10px;
   font-size: 14px;
-  color: rgba(0,0,0,.85);
-  line-height: 1.5;
+  color: rgba(0,0,0,.88);
+  line-height: 1.55;
 }
 
-/* Chips (PRINT 3 fix: não quebrar texto e não criar linha feia) */
-.joy-chip-row{
-  display:flex;
-  flex-wrap:wrap;
-  gap: 8px;
-  margin-top: 10px;
-}
+/* SEARCH */
+.joy-search-row{ margin-top: 12px; }
 
-div[data-testid="stButton"] > button{
-  white-space: nowrap !important;   /* <<< impede quebrar linha */
-}
-
-.joy-chip button{
-  border-radius: 999px !important;
-  padding: 6px 10px !important;
-  border: 1px solid rgba(0,0,0,.12) !important;
-  background: rgba(255,255,255,.95) !important;
-  font-size: 12px !important;       /* <<< menor pra caber */
-}
-
-/* Input e botão Buscar */
 div[data-testid="stTextInput"] input{
-  border-radius: 14px !important;
+  border-radius: 16px !important;
   border: 1px solid rgba(0,0,0,.12) !important;
-  padding: 11px 12px !important;
+  padding: 12px 12px !important;
+  font-size: 14px !important;
 }
 div[data-testid="stTextInput"] input:focus{
-  border: 1px solid rgba(0,0,0,.20) !important;
-  box-shadow: 0 0 0 4px rgba(0,0,0,.05) !important;
-}
-.joy-primary button{
-  border-radius: 14px !important;
-  padding: 10px 12px !important;
-  border: 1px solid rgba(0,0,0,.12) !important;
-  font-weight: 750 !important;
+  border: 1px solid rgba(0,0,0,.22) !important;
+  box-shadow: 0 0 0 5px rgba(0,0,0,.05) !important;
 }
 
-/* Refine premium */
+.joy-primary button{
+  border-radius: 16px !important;
+  padding: 11px 12px !important;
+  border: 1px solid rgba(0,0,0,.12) !important;
+  font-weight: 850 !important;
+}
+
+/* REFINE */
 .joy-refine{
   border: 1px solid rgba(0,0,0,.08);
-  border-radius: 18px;
+  border-radius: 20px;
   padding: 14px 14px;
   background: rgba(255,255,255,.92);
-  box-shadow: 0 12px 26px rgba(0,0,0,.04);
+  box-shadow: 0 14px 30px rgba(0,0,0,.05);
   margin-top: 14px;
 }
 .joy-ref-title{
-  font-weight: 850;
+  font-weight: 900;
   font-size: 14px;
   margin: 0;
 }
@@ -135,47 +122,49 @@ div[data-testid="stTextInput"] input:focus{
   color: rgba(0,0,0,.58);
 }
 
-/* Radios horizontais (segmentado) */
 div[role="radiogroup"]{
   gap: 10px !important;
 }
 div[role="radiogroup"] label{
   border: 1px solid rgba(0,0,0,.12);
   border-radius: 999px;
-  padding: 6px 10px;
+  padding: 7px 11px;
   background: rgba(255,255,255,.95);
 }
 div[role="radiogroup"] label:has(input:checked){
   background: rgba(0,0,0,.06);
   border: 1px solid rgba(0,0,0,.18);
-  font-weight: 750;
+  font-weight: 850;
 }
 
-/* Card de resultado */
+.joy-pillline{
+  margin-top: 10px;
+  font-size: 13px;
+  color: rgba(0,0,0,.75);
+}
+
+/* RESULT CARD */
 .joy-result{
   border: 1px solid rgba(0,0,0,.08);
-  border-radius: 18px;
-  padding: 14px 14px;
+  border-radius: 22px;
+  padding: 16px 16px;
   background: rgba(255,255,255,.94);
-  box-shadow: 0 12px 26px rgba(0,0,0,.04);
+  box-shadow: 0 16px 34px rgba(0,0,0,.05);
   margin-top: 14px;
 }
-.joy-hr{
-  margin: 12px 0;
-  border-bottom: 1px solid rgba(0,0,0,.08);
-}
+.joy-hr{ margin: 12px 0; border-bottom: 1px solid rgba(0,0,0,.08); }
 
-/* Avatar vídeo pequeno no resultado (PRINT 2 vibe) */
-.joy-mini-video{
-  border-radius: 14px;
+/* LOOP VIDEO (sem controles) */
+.joy-video-box{
+  border-radius: 18px;
   overflow: hidden;
   border: 1px solid rgba(0,0,0,.10);
-  box-shadow: 0 10px 20px rgba(0,0,0,.06);
+  box-shadow: 0 14px 28px rgba(0,0,0,.06);
 }
 
 /* Tabela */
 [data-testid="stDataFrame"]{
-  border-radius: 14px;
+  border-radius: 16px;
   overflow:hidden;
   border: 1px solid rgba(0,0,0,.08);
 }
@@ -184,8 +173,9 @@ div[role="radiogroup"] label:has(input:checked){
     unsafe_allow_html=True,
 )
 
+
 # =========================
-# DATA
+# HELPERS
 # =========================
 @st.cache_data(ttl=60, show_spinner=False)
 def load_data(url: str) -> pd.DataFrame:
@@ -197,13 +187,10 @@ def load_data(url: str) -> pd.DataFrame:
     for c in [COL_EMPRESA, COL_DEMANDA, COL_PRODUTO, COL_AUTOR, COL_STATUS, COL_TEXTO]:
         if c in df.columns:
             df[c] = df[c].astype(str).fillna("").str.strip()
+
     return df
 
-df = load_data(SHEETS_CSV_URL)
 
-# =========================
-# HELPERS
-# =========================
 def parse_user_message(msg: str):
     m = msg.strip()
 
@@ -239,6 +226,7 @@ def parse_user_message(msg: str):
 
     return demanda_id, empresa_term, produto, historico, date_since
 
+
 def filter_df(df: pd.DataFrame, demanda_id=None, empresa_term=None, produto=None, date_since=None):
     out = df.copy()
 
@@ -249,7 +237,6 @@ def filter_df(df: pd.DataFrame, demanda_id=None, empresa_term=None, produto=None
         term = empresa_term.lower()
         out = out[out[COL_EMPRESA].str.lower().str.contains(term, na=False)]
 
-    # produto
     if produto and produto != "AMBOS":
         out = out[out[COL_PRODUTO].str.lower().str.contains(produto.lower(), na=False)]
 
@@ -257,6 +244,7 @@ def filter_df(df: pd.DataFrame, demanda_id=None, empresa_term=None, produto=None
         out = out[out[COL_DATE] >= date_since]
 
     return out.sort_values(by=COL_DATE, ascending=False)
+
 
 def produto_from_segment(seg: str):
     if seg == "Saúde":
@@ -267,12 +255,41 @@ def produto_from_segment(seg: str):
         return "AMBOS"
     return None
 
+
 def is_hist_from_segment(seg: str):
     return seg == "Histórico"
 
+
+@st.cache_data(show_spinner=False)
+def video_to_base64(path: str) -> str:
+    with open(path, "rb") as f:
+        return base64.b64encode(f.read()).decode("utf-8")
+
+
+def render_loop_video(path: str, height_px: int = 260):
+    """
+    Vídeo loop REAL (autoplay, loop, muted, playsinline) sem controles.
+    """
+    try:
+        b64 = video_to_base64(path)
+        html = f"""
+        <div class="joy-video-box">
+          <video autoplay loop muted playsinline style="width:100%; height:{height_px}px; object-fit:cover; display:block;">
+            <source src="data:video/mp4;base64,{b64}" type="video/mp4">
+          </video>
+        </div>
+        """
+        st.markdown(html, unsafe_allow_html=True)
+    except Exception:
+        # fallback silencioso
+        st.write("")
+
+
 # =========================
-# HERO (volta pro estilo do print 1)
+# UI - HERO
 # =========================
+df = load_data(SHEETS_CSV_URL)
+
 st.markdown("<div class='joy-hero'>", unsafe_allow_html=True)
 c_img, c_txt = st.columns([1, 3], vertical_alignment="center")
 
@@ -294,12 +311,12 @@ with c_txt:
         unsafe_allow_html=True,
     )
 
-    # Busca
-    st.markdown("<div style='margin-top:10px'></div>", unsafe_allow_html=True)
-    c_in, c_btn = st.columns([4.4, 1.2])
+    # search box + button
+    st.markdown("<div class='joy-search-row'></div>", unsafe_allow_html=True)
+    c_in, c_btn = st.columns([4.2, 1.3])
     with c_in:
         st.session_state.query = st.text_input(
-            "🔎 O que vamos consultar agora?",
+            "🔎 Pesquisa",
             value=st.session_state.query,
             label_visibility="collapsed",
             placeholder="Ex.: 6163 | Leadec | 6163 histórico | Leadec saúde | desde 10/01/2026",
@@ -309,23 +326,13 @@ with c_txt:
         do_search = st.button("Buscar", use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # Chips (corrigidos - sem linha/quebra)
-    st.markdown("<div class='joy-chip-row'>", unsafe_allow_html=True)
-    chips = ["6163", "6163 histórico", "Leadec", "Leadec saúde", "Leadec odonto", "desde 10/01/2026"]
-    chip_cols = st.columns(6)
-    for i, ch in enumerate(chips):
-        with chip_cols[i]:
-            st.markdown("<div class='joy-chip'>", unsafe_allow_html=True)
-            if st.button(ch):
-                st.session_state.query = ch
-                do_search = True
-            st.markdown("</div>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+st.markdown("</div>", unsafe_allow_html=True)
 
-st.markdown("</div>", unsafe_allow_html=True)  # fecha hero
+# ✅ REMOVIDO: exemplos/chips (você riscou — agora não existe mais)
+
 
 # =========================
-# REFINE (profissional)
+# UI - REFINE (premium)
 # =========================
 st.markdown("<div class='joy-refine'>", unsafe_allow_html=True)
 st.markdown("<div class='joy-ref-title'>🎛️ Refine</div>", unsafe_allow_html=True)
@@ -358,23 +365,23 @@ with rf3:
         st.session_state.query = ""
 
 st.markdown(
-    f"""
-<span class="joy-pilltag">Produto: {st.session_state.produto_seg}</span>
-<span class="joy-pilltag">Modo: {st.session_state.modo_seg}</span>
-""",
+    f"<div class='joy-pillline'>Produto: <b>{st.session_state.produto_seg}</b> &nbsp;•&nbsp; "
+    f"Modo: <b>{st.session_state.modo_seg}</b></div>",
     unsafe_allow_html=True,
 )
+
 st.markdown("</div>", unsafe_allow_html=True)
 
+
 # =========================
-# RESULTADO
+# RESULT
 # =========================
 if do_search and st.session_state.query.strip():
     q = st.session_state.query.strip()
 
     demanda_id, empresa_term, produto_text, historico_text, date_since = parse_user_message(q)
 
-    # aplica refine caso não veio no texto
+    # refine caso texto não tenha
     seg_prod = produto_from_segment(st.session_state.produto_seg)
     seg_hist = is_hist_from_segment(st.session_state.modo_seg)
 
@@ -391,26 +398,20 @@ if do_search and st.session_state.query.strip():
         st.markdown("</div>", unsafe_allow_html=True)
 
     else:
-        # Header do card + vídeo pequeno (estilo print 2)
-        left, right = st.columns([4.6, 1.2], vertical_alignment="top")
+        left, right = st.columns([4.8, 1.2], vertical_alignment="top")
 
         with left:
             if historico_final:
                 st.markdown("### 🗂️ Histórico")
-                st.markdown("<div style='color:rgba(0,0,0,.58);font-size:12.8px'>Mais recente primeiro</div>", unsafe_allow_html=True)
+                st.caption("Mais recente primeiro")
             else:
                 st.markdown("### 📌 Última atualização")
 
-            st.markdown(f"<div style='color:rgba(0,0,0,.58);font-size:12.8px'>Consulta: <b>{q}</b></div>", unsafe_allow_html=True)
+            st.caption(f"Consulta: {q}")
 
         with right:
-            # VÍDEO PEQUENO — só aqui (nada de loading)
-            try:
-                st.markdown("<div class='joy-mini-video'>", unsafe_allow_html=True)
-                st.video(RESULT_VIDEO)  # fica pequeno pq a coluna é pequena
-                st.markdown("</div>", unsafe_allow_html=True)
-            except Exception:
-                pass
+            # ✅ VÍDEO LOOP REAL — SEM CONTROLES — SÓ NO RESULTADO
+            render_loop_video(RESULT_LOOP_VIDEO, height_px=240)
 
         st.markdown("<div class='joy-hr'></div>", unsafe_allow_html=True)
 
@@ -425,10 +426,10 @@ if do_search and st.session_state.query.strip():
                 COL_TEXTO: "Atualização",
             })
             st.dataframe(view, use_container_width=True, hide_index=True)
-
         else:
             r = result.iloc[0]
             d = r[COL_DATE].strftime("%d/%m/%Y") if pd.notna(r[COL_DATE]) else "—"
+
             st.markdown(
                 f"""
 - **ID:** {r[COL_ID]}
